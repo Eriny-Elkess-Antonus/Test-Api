@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+
+  # Web Server Service
+  nginx:
+    container_name: nginx
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    depends_on:
+      - app
+      - db
+    volumes:
+      - ./src:/var/www
+      - ./nginx/conf.d/:/etc/nginx/conf.d
+
+  #Database Service
+  db:
+    container_name: mysql
+    image: mysql
+    ports:
+      - "3307:3306"
+    volumes:
+      - ./mysql/data:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: 'password'
+      MYSQL_DATABASE: 'news_db'
+      MYSQL_USER: 'news'
+      MYSQL_PASSWORD: 'password'
+      MYSQL_CHARSET: 'utf8mb4'
+      MYSQL_COLLATION: 'utf8mb4_general_ci'
+
+  # phpMyAdmin Service
+  phpmyadmin:
+    container_name: phpmyadmin
+    image: phpmyadmin/phpmyadmin
+    ports:
+      - "3400:80"
+    depends_on:
+      - db
+
+  # Application Service
+  app:
+    container_name: news-app
+    build:
+      context: ./php
+      dockerfile: Dockerfile
+    volumes:
+      - ./src:/var/www
+    ports:
+      - "9000:9000"
+    working_dir: /var/www
+
+  # Supervisor Service
+  supervisor:
+    container_name: news-supervisor
+    build:
+      context: ./php
+      dockerfile: Dockerfile
+    image: news-supervisor
+    restart: unless-stopped
+    working_dir: /var/www/
+    volumes:
+      - ./src:/var/www
+      - ./supervisor/conf.d/:/etc/supervisor/conf.d
